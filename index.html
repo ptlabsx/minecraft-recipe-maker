@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minecraft 26.3 Recipe Maker • Wilderness Bound</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1a1b1e;
+    --panel: #25262b;
+    --panel-hover: #2c2e33;
+    --slot: #373a40;
+    --text: #c1c2c5;
+    --text-bright: #ffffff;
+    --accent: #4dabf7;
+    --accent-green: #51cf66;
+    --border: #373a40;
+    --header-bg: #141517;
+    --tooltip-bg: #100010;
+    --tooltip-border: #5000ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--text-bright);
+  }
+  .logo span {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    color: var(--accent-green);
+  }
+  .version-badge {
+    background: #2b2d31;
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--accent);
+  }
+  .app {
+    display: grid;
+    grid-template-columns: 260px 1fr 340px;
+    flex: 1;
+    min-height: 0;
+  }
+  @media (max-width: 1100px) {
+    .app { grid-template-columns: 1fr; }
+  }
+  .sidebar {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .sidebar h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #868e96;
+    margin: 8px 0 4px;
+  }
+  .mode-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 14px;
+    width: 100%;
+    text-align: left;
+    transition: 0.15s;
+  }
+  .mode-btn:hover { background: var(--panel-hover); }
+  .mode-btn.active {
+    background: #1c3a5f;
+    border-color: var(--accent);
+    color: var(--text-bright);
+  }
+  .mode-btn img { width: 24px; height: 24px; image-rendering: pixelated; }
+  input[type="text"], input[type="number"] {
+    background: #1a1b1e;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-bright);
+    padding: 8px 10px;
+    font-size: 13px;
+    width: 100%;
+  }
+  input[type="number"] { width: 70px; }
+  .preview {
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    overflow: auto;
+  }
+  .preview-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+  }
+  .preview-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: var(--text-bright);
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .craft-area {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .grid {
+    display: grid;
+    gap: 4px;
+    background: #1a1b1e;
+    padding: 8px;
+    border-radius: 6px;
+  }
+  .grid.crafting { grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(3, 52px); }
+  .grid.furnace { grid-template-columns: 52px; grid-template-rows: 52px 18px 52px; }
+  .grid.smithing { grid-template-columns: 52px 14px 52px 14px 52px; grid-template-rows: 52px; }
+  .slot {
+    width: 52px; height: 52px;
+    background: var(--slot);
+    border: 2px solid #1a1b1e;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: pointer;
+    transition: 0.1s;
+  }
+  .slot:hover { background: #444850; }
+  .slot img { width: 36px; height: 36px; image-rendering: pixelated; pointer-events: none; }
+  .slot .count {
+    position: absolute; bottom: 2px; right: 3px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px; color: #fff;
+    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+    pointer-events: none;
+  }
+  .arrow { font-size: 26px; color: #868e96; }
+  .result-slot { width: 64px; height: 64px; }
+  .result-slot img { width: 44px; height: 44px; }
+  .action-bar { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  button {
+    font-family: inherit; font-size: 13px;
+    padding: 9px 16px; border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--panel); color: var(--text);
+    cursor: pointer; transition: 0.15s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  button:hover { background: var(--panel-hover); }
+  button.primary { background: #1c7ed6; border-color: #1c7ed6; color: #fff; }
+  button.primary:hover { background: #1971c2; }
+  button.danger { border-color: #c92a2a; color: #ff6b6b; background: transparent; }
+  .inventory {
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; min-height: 0;
+  }
+  .inv-header { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+  .search-box { position: relative; }
+  .search-box input { padding-left: 32px; }
+  .search-box::before { content: "⌕"; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #868e96; }
+  .tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+  .tab {
+    padding: 5px 10px; font-size: 12px; border-radius: 6px;
+    background: transparent; border: 1px solid transparent; color: #868e96; cursor: pointer;
+  }
+  .tab:hover { background: var(--panel-hover); color: var(--text); }
+  .tab.active { background: #1c3a5f; border-color: var(--accent); color: var(--text-bright); }
+  .items-scroll { flex: 1; overflow-y: auto; padding: 10px; }
+  .items-grid { display: grid; grid-template-columns: repeat(auto-fill, 48px); gap: 4px; }
+  .item {
+    width: 48px; height: 48px; background: var(--slot);
+    border: 2px solid transparent; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: grab; transition: 0.1s;
+  }
+  .item:hover, .item.selected { border-color: var(--accent); background: #3a3f47; }
+  .item img { width: 32px; height: 32px; image-rendering: pixelated; pointer-events: none; }
+  .inv-footer { padding: 12px; border-top: 1px solid var(--border); }
+  #tooltip {
+    position: fixed; background: var(--tooltip-bg); border: 2px solid var(--tooltip-border);
+    color: #fff; padding: 8px 12px; font-size: 12px; pointer-events: none;
+    z-index: 9999; display: none; max-width: 240px; border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5); line-height: 1.4;
+  }
+  #tooltip .name { color: #55ffff; font-weight: 600; margin-bottom: 2px; }
+  #tooltip .id { color: #aaa; font-size: 11px; }
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-thumb { background: #373a40; border-radius: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <img src="https://mcasset.cloud/1.21.8/assets/minecraft/textures/block/crafting_table_front.png" width="28" height="28" style="image-rendering:pixelated" alt="">
+    <div>Crafting Generator <span>26.3</span></div>
+  </div>
+  <div class="version-badge">Java 26.3 • Wilderness Bound</div>
+</header>
+
+<div class="app">
+  <aside class="sidebar">
+    <h3>Recipe Type</h3>
+    <button class="mode-btn active" id="btn-crafting" onclick="setMode('crafting')">
+      <img src="https://mcasset.cloud/1.21.8/assets/minecraft/textures/block/crafting_table_front.png" alt="">
+      Crafting Table
+    </button>
+    <button class="mode-btn" id="btn-furnace" onclick="setMode('furnace')">
+      <img src="https://mcasset.cloud/1.21.8/assets/minecraft/textures/block/furnace_front.png" alt="">
+      Furnace
+    </button>
+    <button class="mode-btn" id="btn-smithing" onclick="setMode('smithing')">
+      <img src="https://mcasset.cloud/1.21.8/assets/minecraft/textures/block/smithing_table_front.png" alt="">
+      Smithing Table
+    </button>
+
+    <h3 style="margin-top:16px">Options</h3>
+    <label style="font-size:12px;color:#868e96">Recipe Name</label>
+    <input type="text" id="recipe-title" value="Poplar Planks" placeholder="Recipe name...">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;font-size:13px">
+      <span>Result Count</span>
+      <input type="number" id="stack-count" min="1" max="64" value="4">
+    </div>
+
+    <div style="margin-top:auto;padding-top:20px">
+      <button class="danger" style="width:100%" onclick="clearAll()">Clear All</button>
+    </div>
+  </aside>
+
+  <main class="preview">
+    <div class="preview-card">
+      <div class="preview-title" id="mode-title">Crafting</div>
+      <div class="craft-area">
+        <div id="crafting-grid" class="grid crafting"></div>
+        <div class="arrow">→</div>
+        <div class="slot result-slot" id="result-slot"></div>
+      </div>
+    </div>
+    <div class="action-bar">
+      <button class="primary" onclick="exportPNG(false)">📷 Download PNG</button>
+      <button onclick="exportPNG(true)">📋 Copy Image</button>
+    </div>
+    <p style="font-size:12px;color:#868e96;text-align:center;max-width:380px">
+      Click item → click slot to place · Right-click to remove · Drag & drop supported
+    </p>
+  </main>
+
+  <aside class="inventory">
+    <div class="inv-header">
+      <div class="search-box">
+        <input type="text" id="search" placeholder="Search items..." oninput="filterItems()">
+      </div>
+      <div class="tabs">
+        <button class="tab active" data-cat="all" onclick="setCategory('all')">All</button>
+        <button class="tab" data-cat="new" onclick="setCategory('new')">26.3 New</button>
+        <button class="tab" data-cat="blocks" onclick="setCategory('blocks')">Blocks</button>
+        <button class="tab" data-cat="tools" onclick="setCategory('tools')">Tools</button>
+        <button class="tab" data-cat="materials" onclick="setCategory('materials')">Items</button>
+      </div>
+    </div>
+    <div class="items-scroll">
+      <div class="items-grid" id="items-grid"></div>
+    </div>
+    <div class="inv-footer">
+      <label style="width:100%">
+        <button style="width:100%">⬆ Upload Custom Item
+          <input type="file" id="upload" accept="image/png,image/gif,image/webp" style="display:none" onchange="handleUpload(event)">
+        </button>
+      </label>
+    </div>
+  </aside>
+</div>
+
+<div id="tooltip"></div>
+<canvas id="export-canvas" style="display:none"></canvas>
+
+<script>
+const ITEMS = [
+  {id:"poplar_log",name:"Poplar Log",cat:"new",texture:"block/oak_log"},
+  {id:"poplar_planks",name:"Poplar Planks",cat:"new",texture:"block/oak_planks"},
+  {id:"poplar_sapling",name:"Poplar Sapling",cat:"new",texture:"block/oak_sapling"},
+  {id:"poplar_leaves",name:"Poplar Leaves",cat:"new",texture:"block/oak_leaves"},
+  {id:"poplar_stairs",name:"Poplar Stairs",cat:"new",texture:"block/oak_stairs"},
+  {id:"poplar_slab",name:"Poplar Slab",cat:"new",texture:"block/oak_slab"},
+  {id:"poplar_fence",name:"Poplar Fence",cat:"new",texture:"block/oak_fence"},
+  {id:"poplar_boat",name:"Poplar Boat",cat:"new",texture:"item/oak_boat"},
+  {id:"poplar_chest_boat",name:"Poplar Boat with Chest",cat:"new",texture:"item/oak_chest_boat"},
+  {id:"shelf_mushroom",name:"Shelf Mushroom",cat:"new",texture:"block/brown_mushroom"},
+  {id:"red_shrub",name:"Red Shrub",cat:"new",texture:"block/dead_bush"},
+  {id:"straw_bed",name:"Straw Bed",cat:"new",texture:"item/red_bed"},
+  {id:"cushion_white",name:"White Cushion",cat:"new",texture:"block/white_wool"},
+  {id:"cushion_orange",name:"Orange Cushion",cat:"new",texture:"block/orange_wool"},
+  {id:"cushion_magenta",name:"Magenta Cushion",cat:"new",texture:"block/magenta_wool"},
+  {id:"cushion_light_blue",name:"Light Blue Cushion",cat:"new",texture:"block/light_blue_wool"},
+  {id:"cushion_yellow",name:"Yellow Cushion",cat:"new",texture:"block/yellow_wool"},
+  {id:"cushion_lime",name:"Lime Cushion",cat:"new",texture:"block/lime_wool"},
+  {id:"cushion_pink",name:"Pink Cushion",cat:"new",texture:"block/pink_wool"},
+  {id:"cushion_gray",name:"Gray Cushion",cat:"new",texture:"block/gray_wool"},
+  {id:"cushion_light_gray",name:"Light Gray Cushion",cat:"new",texture:"block/light_gray_wool"},
+  {id:"cushion_cyan",name:"Cyan Cushion",cat:"new",texture:"block/cyan_wool"},
+  {id:"cushion_purple",name:"Purple Cushion",cat:"new",texture:"block/purple_wool"},
+  {id:"cushion_blue",name:"Blue Cushion",cat:"new",texture:"block/blue_wool"},
+  {id:"cushion_brown",name:"Brown Cushion",cat:"new",texture:"block/brown_wool"},
+  {id:"cushion_green",name:"Green Cushion",cat:"new",texture:"block/green_wool"},
+  {id:"cushion_red",name:"Red Cushion",cat:"new",texture:"block/red_wool"},
+  {id:"cushion_black",name:"Black Cushion",cat:"new",texture:"block/black_wool"},
+  {id:"wool_stairs",name:"Wool Stairs",cat:"new",texture:"block/white_wool"},
+  {id:"wool_slab",name:"Wool Slab",cat:"new",texture:"block/white_wool"},
+  {id:"concrete_stairs",name:"Concrete Stairs",cat:"new",texture:"block/white_concrete"},
+  {id:"concrete_slab",name:"Concrete Slab",cat:"new",texture:"block/white_concrete"},
+  {id:"explorer_map",name:"Explorer Map",cat:"new",texture:"item/filled_map"},
+  {id:"oak_planks",name:"Oak Planks",cat:"blocks",texture:"block/oak_planks"},
+  {id:"spruce_planks",name:"Spruce Planks",cat:"blocks",texture:"block/spruce_planks"},
+  {id:"birch_planks",name:"Birch Planks",cat:"blocks",texture:"block/birch_planks"},
+  {id:"jungle_planks",name:"Jungle Planks",cat:"blocks",texture:"block/jungle_planks"},
+  {id:"acacia_planks",name:"Acacia Planks",cat:"blocks",texture:"block/acacia_planks"},
+  {id:"dark_oak_planks",name:"Dark Oak Planks",cat:"blocks",texture:"block/dark_oak_planks"},
+  {id:"cherry_planks",name:"Cherry Planks",cat:"blocks",texture:"block/cherry_planks"},
+  {id:"bamboo_planks",name:"Bamboo Planks",cat:"blocks",texture:"block/bamboo_planks"},
+  {id:"crimson_planks",name:"Crimson Planks",cat:"blocks",texture:"block/crimson_planks"},
+  {id:"warped_planks",name:"Warped Planks",cat:"blocks",texture:"block/warped_planks"},
+  {id:"cobblestone",name:"Cobblestone",cat:"blocks",texture:"block/cobblestone"},
+  {id:"stone",name:"Stone",cat:"blocks",texture:"block/stone"},
+  {id:"smooth_stone",name:"Smooth Stone",cat:"blocks",texture:"block/smooth_stone"},
+  {id:"stone_bricks",name:"Stone Bricks",cat:"blocks",texture:"block/stone_bricks"},
+  {id:"dirt",name:"Dirt",cat:"blocks",texture:"block/dirt"},
+  {id:"grass_block",name:"Grass Block",cat:"blocks",texture:"block/grass_block_top"},
+  {id:"sand",name:"Sand",cat:"blocks",texture:"block/sand"},
+  {id:"gravel",name:"Gravel",cat:"blocks",texture:"block/gravel"},
+  {id:"oak_log",name:"Oak Log",cat:"blocks",texture:"block/oak_log"},
+  {id:"glass",name:"Glass",cat:"blocks",texture:"block/glass"},
+  {id:"bricks",name:"Bricks",cat:"blocks",texture:"block/bricks"},
+  {id:"bookshelf",name:"Bookshelf",cat:"blocks",texture:"block/bookshelf"},
+  {id:"obsidian",name:"Obsidian",cat:"blocks",texture:"block/obsidian"},
+  {id:"netherrack",name:"Netherrack",cat:"blocks",texture:"block/netherrack"},
+  {id:"soul_sand",name:"Soul Sand",cat:"blocks",texture:"block/soul_sand"},
+  {id:"glowstone",name:"Glowstone",cat:"blocks",texture:"block/glowstone"},
+  {id:"end_stone",name:"End Stone",cat:"blocks",texture:"block/end_stone"},
+  {id:"hay_block",name:"Hay Bale",cat:"blocks",texture:"block/hay_block_side"},
+  {id:"white_wool",name:"White Wool",cat:"blocks",texture:"block/white_wool"},
+  {id:"orange_wool",name:"Orange Wool",cat:"blocks",texture:"block/orange_wool"},
+  {id:"yellow_wool",name:"Yellow Wool",cat:"blocks",texture:"block/yellow_wool"},
+  {id:"lime_wool",name:"Lime Wool",cat:"blocks",texture:"block/lime_wool"},
+  {id:"pink_wool",name:"Pink Wool",cat:"blocks",texture:"block/pink_wool"},
+  {id:"cyan_wool",name:"Cyan Wool",cat:"blocks",texture:"block/cyan_wool"},
+  {id:"purple_wool",name:"Purple Wool",cat:"blocks",texture:"block/purple_wool"},
+  {id:"blue_wool",name:"Blue Wool",cat:"blocks",texture:"block/blue_wool"},
+  {id:"green_wool",name:"Green Wool",cat:"blocks",texture:"block/green_wool"},
+  {id:"red_wool",name:"Red Wool",cat:"blocks",texture:"block/red_wool"},
+  {id:"black_wool",name:"Black Wool",cat:"blocks",texture:"block/black_wool"},
+  {id:"crafting_table",name:"Crafting Table",cat:"blocks",texture:"block/crafting_table_front"},
+  {id:"furnace",name:"Furnace",cat:"blocks",texture:"block/furnace_front"},
+  {id:"chest",name:"Chest",cat:"blocks",texture:"block/oak_planks"},
+  {id:"barrel",name:"Barrel",cat:"blocks",texture:"block/barrel_side"},
+  {id:"anvil",name:"Anvil",cat:"blocks",texture:"block/anvil"},
+  {id:"enchanting_table",name:"Enchanting Table",cat:"blocks",texture:"block/enchanting_table_top"},
+  {id:"beacon",name:"Beacon",cat:"blocks",texture:"block/beacon"},
+  {id:"white_concrete",name:"White Concrete",cat:"blocks",texture:"block/white_concrete"},
+  {id:"deepslate",name:"Deepslate",cat:"blocks",texture:"block/deepslate"},
+  {id:"copper_block",name:"Copper Block",cat:"blocks",texture:"block/copper_block"},
+  {id:"iron_block",name:"Iron Block",cat:"blocks",texture:"block/iron_block"},
+  {id:"gold_block",name:"Gold Block",cat:"blocks",texture:"block/gold_block"},
+  {id:"diamond_block",name:"Diamond Block",cat:"blocks",texture:"block/diamond_block"},
+  {id:"emerald_block",name:"Emerald Block",cat:"blocks",texture:"block/emerald_block"},
+  {id:"netherite_block",name:"Netherite Block",cat:"blocks",texture:"block/netherite_block"},
+  {id:"redstone_block",name:"Redstone Block",cat:"blocks",texture:"block/redstone_block"},
+  {id:"coal_block",name:"Coal Block",cat:"blocks",texture:"block/coal_block"},
+  {id:"wooden_pickaxe",name:"Wooden Pickaxe",cat:"tools",texture:"item/wooden_pickaxe"},
+  {id:"stone_pickaxe",name:"Stone Pickaxe",cat:"tools",texture:"item/stone_pickaxe"},
+  {id:"iron_pickaxe",name:"Iron Pickaxe",cat:"tools",texture:"item/iron_pickaxe"},
+  {id:"diamond_pickaxe",name:"Diamond Pickaxe",cat:"tools",texture:"item/diamond_pickaxe"},
+  {id:"netherite_pickaxe",name:"Netherite Pickaxe",cat:"tools",texture:"item/netherite_pickaxe"},
+  {id:"iron_axe",name:"Iron Axe",cat:"tools",texture:"item/iron_axe"},
+  {id:"diamond_axe",name:"Diamond Axe",cat:"tools",texture:"item/diamond_axe"},
+  {id:"netherite_axe",name:"Netherite Axe",cat:"tools",texture:"item/netherite_axe"},
+  {id:"iron_shovel",name:"Iron Shovel",cat:"tools",texture:"item/iron_shovel"},
+  {id:"diamond_shovel",name:"Diamond Shovel",cat:"tools",texture:"item/diamond_shovel"},
+  {id:"wooden_sword",name:"Wooden Sword",cat:"tools",texture:"item/wooden_sword"},
+  {id:"iron_sword",name:"Iron Sword",cat:"tools",texture:"item/iron_sword"},
+  {id:"diamond_sword",name:"Diamond Sword",cat:"tools",texture:"item/diamond_sword"},
+  {id:"netherite_sword",name:"Netherite Sword",cat:"tools",texture:"item/netherite_sword"},
+  {id:"bow",name:"Bow",cat:"tools",texture:"item/bow"},
+  {id:"crossbow",name:"Crossbow",cat:"tools",texture:"item/crossbow_standby"},
+  {id:"arrow",name:"Arrow",cat:"tools",texture:"item/arrow"},
+  {id:"trident",name:"Trident",cat:"tools",texture:"item/trident"},
+  {id:"shield",name:"Shield",cat:"tools",texture:"item/shield"},
+  {id:"flint_and_steel",name:"Flint and Steel",cat:"tools",texture:"item/flint_and_steel"},
+  {id:"shears",name:"Shears",cat:"tools",texture:"item/shears"},
+  {id:"fishing_rod",name:"Fishing Rod",cat:"tools",texture:"item/fishing_rod"},
+  {id:"elytra",name:"Elytra",cat:"tools",texture:"item/elytra"},
+  {id:"totem_of_undying",name:"Totem of Undying",cat:"tools",texture:"item/totem_of_undying"},
+  {id:"stick",name:"Stick",cat:"materials",texture:"item/stick"},
+  {id:"coal",name:"Coal",cat:"materials",texture:"item/coal"},
+  {id:"charcoal",name:"Charcoal",cat:"materials",texture:"item/charcoal"},
+  {id:"iron_ingot",name:"Iron Ingot",cat:"materials",texture:"item/iron_ingot"},
+  {id:"gold_ingot",name:"Gold Ingot",cat:"materials",texture:"item/gold_ingot"},
+  {id:"diamond",name:"Diamond",cat:"materials",texture:"item/diamond"},
+  {id:"emerald",name:"Emerald",cat:"materials",texture:"item/emerald"},
+  {id:"netherite_ingot",name:"Netherite Ingot",cat:"materials",texture:"item/netherite_ingot"},
+  {id:"redstone",name:"Redstone Dust",cat:"materials",texture:"item/redstone"},
+  {id:"lapis_lazuli",name:"Lapis Lazuli",cat:"materials",texture:"item/lapis_lazuli"},
+  {id:"quartz",name:"Nether Quartz",cat:"materials",texture:"item/quartz"},
+  {id:"copper_ingot",name:"Copper Ingot",cat:"materials",texture:"item/copper_ingot"},
+  {id:"string",name:"String",cat:"materials",texture:"item/string"},
+  {id:"leather",name:"Leather",cat:"materials",texture:"item/leather"},
+  {id:"paper",name:"Paper",cat:"materials",texture:"item/paper"},
+  {id:"book",name:"Book",cat:"materials",texture:"item/book"},
+  {id:"wheat",name:"Wheat",cat:"materials",texture:"item/wheat"},
+  {id:"bread",name:"Bread",cat:"materials",texture:"item/bread"},
+  {id:"apple",name:"Apple",cat:"materials",texture:"item/apple"},
+  {id:"golden_apple",name:"Golden Apple",cat:"materials",texture:"item/golden_apple"},
+  {id:"carrot",name:"Carrot",cat:"materials",texture:"item/carrot"},
+  {id:"potato",name:"Potato",cat:"materials",texture:"item/potato"},
+  {id:"cooked_beef",name:"Steak",cat:"materials",texture:"item/cooked_beef"},
+  {id:"cookie",name:"Cookie",cat:"materials",texture:"item/cookie"},
+  {id:"bone",name:"Bone",cat:"materials",texture:"item/bone"},
+  {id:"gunpowder",name:"Gunpowder",cat:"materials",texture:"item/gunpowder"},
+  {id:"blaze_rod",name:"Blaze Rod",cat:"materials",texture:"item/blaze_rod"},
+  {id:"ender_pearl",name:"Ender Pearl",cat:"materials",texture:"item/ender_pearl"},
+  {id:"nether_star",name:"Nether Star",cat:"materials",texture:"item/nether_star"},
+  {id:"slime_ball",name:"Slimeball",cat:"materials",texture:"item/slime_ball"},
+  {id:"feather",name:"Feather",cat:"materials",texture:"item/feather"},
+  {id:"flint",name:"Flint",cat:"materials",texture:"item/flint"},
+  {id:"nether_wart",name:"Nether Wart",cat:"materials",texture:"item/nether_wart"},
+  {id:"sugar",name:"Sugar",cat:"materials",texture:"item/sugar"}
+];
+
+let customItems = [], mode = "crafting", selectedItem = null, currentCategory = "all", gridSlots = {}, resultData = null;
+
+function getTextureUrl(p) { return `https://mcasset.cloud/1.21.8/assets/minecraft/textures/${p}.png`; }
+
+function createImg(item) {
+  const img = document.createElement("img");
+  img.alt = item.name; img.draggable = false;
+  if (item.customSrc) img.src = item.customSrc;
+  else {
+    img.src = getTextureUrl(item.texture);
+    img.onerror = function(){ this.onerror=null; this.src="data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#555"/><text x="16" y="21" font-size="12" text-anchor="middle" fill="#ccc">?</text></svg>'); };
+  }
+  return img;
+}
+
+function renderGrid() {
+  const grid = document.getElementById("crafting-grid");
+  grid.innerHTML = ""; grid.className = "grid " + mode;
+  if (mode === "crafting") {
+    for (let r=0;r<3;r++) for (let c=0;c<3;c++) grid.appendChild(makeSlot(r+"-"+c));
+  } else if (mode === "furnace") {
+    grid.appendChild(makeSlot("input"));
+    const sp=document.createElement("div"); sp.style.height="18px"; grid.appendChild(sp);
+    grid.appendChild(makeSlot("fuel"));
+  } else {
+    grid.appendChild(makeSlot("template"));
+    const s1=document.createElement("div"); s1.style.width="14px"; grid.appendChild(s1);
+    grid.appendChild(makeSlot("base"));
+    const s2=document.createElement("div"); s2.style.width="14px"; grid.appendChild(s2);
+    grid.appendChild(makeSlot("addition"));
+  }
+  const res = document.getElementById("result-slot");
+  res.innerHTML = "";
+  if (resultData) {
+    res.appendChild(createImg(resultData.item));
+    if (resultData.count > 1) { const c=document.createElement("span"); c.className="count"; c.textContent=resultData.count; res.appendChild(c); }
+  }
+  document.getElementById("mode-title").textContent = {crafting:"Crafting",furnace:"Furnace",smithing:"Smithing"}[mode];
+}
+
+function makeSlot(key) {
+  const slot = document.createElement("div");
+  slot.className = "slot";
+  const data = gridSlots[key];
+  if (data) {
+    slot.appendChild(createImg(data.item));
+    if (data.count > 1) { const c=document.createElement("span"); c.className="count"; c.textContent=data.count; slot.appendChild(c); }
+  }
+  slot.onclick = () => { if (selectedItem) { gridSlots[key] = {item:selectedItem, count:parseInt(document.getElementById("stack-count").value)||1}; renderGrid(); } };
+  slot.oncontextmenu = e => { e.preventDefault(); delete gridSlots[key]; renderGrid(); };
+  slot.ondragover = e => e.preventDefault();
+  slot.ondrop = e => {
+    e.preventDefault();
+    const id = e.dataTransfer.getData("text/item-id");
+    const item = [...ITEMS,...customItems].find(i=>i.id===id);
+    if (item) { gridSlots[key]={item, count:parseInt(document.getElementById("stack-count").value)||1}; renderGrid(); }
+  };
+  slot.onmouseenter = e => { if (gridSlots[key]) showTooltip(e, gridSlots[key].item); };
+  slot.onmousemove = moveTooltip;
+  slot.onmouseleave = hideTooltip;
+  return slot;
+}
+
+document.getElementById("result-slot").onclick = () => {
+  if (selectedItem) { resultData={item:selectedItem, count:parseInt(document.getElementById("stack-count").value)||1}; renderGrid(); }
+};
+document.getElementById("result-slot").oncontextmenu = e => { e.preventDefault(); resultData=null; renderGrid(); };
+
+function renderItems() {
+  const grid = document.getElementById("items-grid");
+  grid.innerHTML = "";
+  const q = document.getElementById("search").value.toLowerCase().trim();
+  let list = [...ITEMS, ...customItems];
+  if (currentCategory !== "all") list = list.filter(i => i.cat === currentCategory);
+  if (q) list = list.filter(i => i.name.toLowerCase().includes(q) || i.id.toLowerCase().includes(q));
+  list.forEach(item => {
+    const el = document.createElement("div");
+    el.className = "item" + (selectedItem?.id === item.id ? " selected" : "");
+    el.appendChild(createImg(item));
+    el.draggable = true;
+    el.onclick = () => { selectedItem = item; renderItems(); };
+    el.ondragstart = e => { e.dataTransfer.setData("text/item-id", item.id); selectedItem = item; };
+    el.onmouseenter = e => showTooltip(e, item);
+    el.onmousemove = moveTooltip;
+    el.onmouseleave = hideTooltip;
+    grid.appendChild(el);
+  });
+}
+
+function filterItems(){ renderItems(); }
+function setCategory(cat){ currentCategory=cat; document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.cat===cat)); renderItems(); }
+function setMode(m){ mode=m; gridSlots={}; resultData=null; document.querySelectorAll(".mode-btn").forEach(b=>b.classList.remove("active")); document.getElementById("btn-"+m).classList.add("active"); renderGrid(); }
+function clearAll(){ gridSlots={}; resultData=null; selectedItem=null; renderGrid(); renderItems(); }
+
+function handleUpload(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const item={id:"custom_"+Date.now(), name:file.name.replace(/\.[^/.]+$/,"")||"Custom Item", cat:"new", customSrc:ev.target.result};
+    customItems.unshift(item); selectedItem=item; setCategory("new"); renderItems();
+  };
+  reader.readAsDataURL(file); e.target.value="";
+}
+
+const tooltip=document.getElementById("tooltip");
+function showTooltip(e,item){ tooltip.innerHTML=`<div class="name">${item.name}</div><div class="id">${item.id}</div>`; tooltip.style.display="block"; moveTooltip(e); }
+function moveTooltip(e){ tooltip.style.left=(e.clientX+14)+"px"; tooltip.style.top=(e.clientY+14)+"px"; }
+function hideTooltip(){ tooltip.style.display="none"; }
+
+async function exportPNG(copy=false){
+  const scale=4, canvas=document.getElementById("export-canvas"), ctx=canvas.getContext("2d");
+  ctx.imageSmoothingEnabled=false;
+  let gw,gh;
+  if(mode==="crafting"){gw=3*52+2*4+16;gh=3*52+2*4+16;}
+  else if(mode==="furnace"){gw=52+16;gh=52+18+52+16;}
+  else{gw=3*52+2*14+16;gh=52+16;}
+  const title=document.getElementById("recipe-title").value||"Recipe";
+  const pad=20, titleH=30;
+  const totalW=(gw+80+64)*scale, totalH=(gh+titleH+pad*2)*scale;
+  canvas.width=totalW; canvas.height=totalH;
+  ctx.fillStyle="#c6c6c6"; ctx.fillRect(0,0,totalW,totalH);
+  ctx.strokeStyle="#fff"; ctx.lineWidth=4*scale; ctx.strokeRect(2*scale,2*scale,totalW-4*scale,totalH-4*scale);
+  ctx.strokeStyle="#555"; ctx.strokeRect(6*scale,6*scale,totalW-12*scale,totalH-12*scale);
+  ctx.font=`${11*scale}px "Press Start 2P", monospace`; ctx.fillStyle="#3f3f3f"; ctx.fillText(title,14*scale,24*scale);
+  const startX=14*scale, startY=(titleH+6)*scale;
+  ctx.fillStyle="#373737"; ctx.fillRect(startX-6*scale,startY-6*scale,gw*scale,gh*scale);
+
+  const loadImg=src=>new Promise(res=>{const i=new Image();i.crossOrigin="anonymous";i.onload=()=>res(i);i.onerror=()=>res(null);i.src=src;});
+  async function drawSlot(key,sx,sy,size=52){
+    ctx.fillStyle="#8b8b8b"; ctx.fillRect(sx,sy,size*scale,size*scale);
+    ctx.strokeStyle="#373737"; ctx.lineWidth=2*scale; ctx.strokeRect(sx,sy,size*scale,size*scale);
+    const data=key==="result"?resultData:gridSlots[key]; if(!data) return;
+    const src=data.item.customSrc||getTextureUrl(data.item.texture);
+    const img=await loadImg(src);
+    if(img){const is=36*scale,off=((size-36)/2)*scale; ctx.drawImage(img,sx+off,sy+off,is,is);}
+    if(data.count>1){ctx.font=`${10*scale}px "Press Start 2P", monospace`;ctx.fillStyle="#3f3f3f";ctx.fillText(String(data.count),sx+(size-14)*scale+scale,sy+(size-5)*scale+scale);ctx.fillStyle="#fff";ctx.fillText(String(data.count),sx+(size-14)*scale,sy+(size-5)*scale);}
+  }
+
+  if(mode==="crafting"){for(let r=0;r<3;r++)for(let c=0;c<3;c++)await drawSlot(r+"-"+c,startX+c*(52+4)*scale,startY+r*(52+4)*scale);}
+  else if(mode==="furnace"){await drawSlot("input",startX,startY);await drawSlot("fuel",startX,startY+(52+18)*scale);}
+  else{await drawSlot("template",startX,startY);await drawSlot("base",startX+(52+14)*scale,startY);await drawSlot("addition",startX+2*(52+14)*scale,startY);}
+  const ax=startX+gw*scale+10*scale, ay=startY+(gh/2-12)*scale;
+  ctx.font=`${22*scale}px "Press Start 2P", monospace`; ctx.fillStyle="#3f3f3f"; ctx.fillText("→",ax,ay+20*scale);
+  await drawSlot("result",ax+40*scale,startY+(gh/2-32)*scale,64);
+
+  if(copy){
+    canvas.toBlob(async blob=>{try{await navigator.clipboard.write([new ClipboardItem({"image/png":blob})]);alert("Đã copy ảnh vào Clipboard!");}catch{alert("Trình duyệt không hỗ trợ. Dùng Download PNG.");}});
+  } else {
+    const a=document.createElement("a"); a.download=(title.replace(/[^a-z0-9]/gi,"_")||"recipe")+".png"; a.href=canvas.toDataURL("image/png"); a.click();
+  }
+}
+
+renderGrid();
+renderItems();
+</script>
+</body>
+</html>
